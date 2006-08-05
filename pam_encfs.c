@@ -70,7 +70,6 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/stat.h>
 
 #include <sys/ioctl.h>
 #include <fcntl.h>
@@ -176,14 +175,6 @@ int waitpid_timeout(pid_t pid, int *status, int options)
     return 0;
 }
 
-int is_dir(const char *path)
-{
-    struct stat statbuf;
-    if ((stat(path,&statbuf) == 0) && (S_ISDIR(statbuf.st_mode) == 1)) {
-        return 1;
-    }
-    return 0;
-}
 
 int checkmnt(const char *targetpath)
 {
@@ -194,7 +185,7 @@ int checkmnt(const char *targetpath)
     {
         if (strcmp(m->mnt_fsname, "encfs") == 0)
         {
-            // DEBUG _pam_log(LOG_ERR, "Found mounted fuse system : %s",m->mnt_dir);
+            // DEBUG _pam_log(LOG_ERR, "Found mounted encfs system : %s",m->mnt_dir);
             if (strcmp(targetpath, m->mnt_dir) == 0)
             {
                 // DEBUG _pam_log(LOG_ERR, "ENCFS already mounted on : %s",m->mnt_dir);
@@ -330,14 +321,14 @@ int readconfig(struct passwd *pwd, pam_handle_t * pamh, const char *user,
             }
 
             // Check if path exists, if we're "-" then we dont care, if not we give error.
-            if (is_dir(path))
+            if (!chdir(path))
             {
-                // We may fail to stat this directory (EPERM) if it's mounted because of fuse's funky permission system.
-                if (!is_dir(targetpath))
+                // Path exists, check if targetpath does too
+                if (chdir(targetpath))
                 {
                     if (checkmnt(targetpath))
                     {
-                        // Doublecheck if we're mounted, for some reason we can't stat the dir even when root if it's mounted.
+                        // Doublecheck if we're mounted, for some reason we can't chdir to the dir even when root if it's mounted.
                         // we are mounted, but we return 1 anyway so we can store targetpath
                         fclose(conffile);
                         return 1;
@@ -544,8 +535,6 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh,
             dup2(inpipe[WRITE_END], fileno(stdout));
             close(inpipe[WRITE_END]);
 
-            // For some reason the current directory has to be set to targetpath (or path?) before exec'ing encfs through gdm
-            chdir(targetpath);
             execvp("encfs", arg);
             char errstr[128];
 
@@ -567,9 +556,8 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh,
     {
         len = write(outpipe[WRITE_END], passwd, (size_t) strlen(passwd));
         if ((len != (size_t) strlen(passwd))
-            || (write(outpipe[WRITE_END], "\n", 1) != 1))
+            || (write(outpipe[WRITE_END], "\n", 2) != 2))
             _pam_log(LOG_ERR, "Did not send password to pipe (%d sent)", len);
-        close(outpipe[WRITE_END]);
     }
 
 
@@ -583,7 +571,6 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh,
     char buff[512];
 
     len = read(inpipe[READ_END], &buff, 512);
-    close(inpipe[READ_END]);
     buff[len] = 0;
     if (!checkmnt(targetpath) && (len > 0 || exitstatus > 0))
     {
@@ -622,7 +609,7 @@ PAM_EXTERN int pam_sm_close_session(pam_handle_t * pamh,
 
     int retval;
     pid_t pid;
-    char *targetpath;
+    const char *targetpath;
     char *args[4];
 
     //  _pam_log(LOG_ERR,"Geteuid : %d",geteuid());
