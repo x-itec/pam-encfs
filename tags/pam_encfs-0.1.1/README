@@ -1,0 +1,47 @@
+pam_encfs by neuron@hollowtube.mine.nu.
+
+pam_encfs uses execvp, so on some systems it will not find encfs if it's in /usr/local, if it's in /usr/bin it will be found.
+
+
+*Documentation is written quick and dirty, if something is wrong/you can't get it working, PLEASE mail me :)*
+
+
+Put pam_encfs.conf in /etc and modify your pam to load (for example):
+auth required        pam_encfs.so
+
+and if you want to auto umount on logout:
+session        required        pam_encfs.so
+
+
+If you want gdm working you'll have to do this: (to allow use of --public / allow_root / allow_other)
+#echo "user_allow_other" > /etc/fuse.conf
+
+#adduser testuser (put him in the fuse group if you have one)
+#mkdir -p /mnt/storage/enc/testuser 
+Setup your /etc/pam_encfs.conf (default should work)
+#chown testuser:testuser /mnt/storage/enc/testuser
+#su testuser
+#encfs /mnt/storage/enc/testuser /home/testuser
+*use same password as your login atm*
+#fusermount -u /home/testuser
+
+
+when you login, the directory should be mounted.
+
+
+example to enable encryption for existing user:
+*logout of any important things, turn off your apps, preferably do this in terminal login/as root*
+sudo mkdir -p /mnt/storage/enc/neuron /mnt/storage/enc/tmp
+*use your main password on next part*
+encfs /mnt/storage/enc/neuron /mnt/storage/enc/tmp -- -o allow_root
+cd /home/neuron
+find . -print -xdev | cpio -pamd /mnt/storage/enc/tmp
+fusermount -u /mnt/storage/enc/tmp
+cd /
+sudo mv /home/neuron /home/neuron.BAK
+sudo mkdir /home/neuron
+sudo chown neuron:neuron /home/neuron
+sudo rmdir /mnt/storage/enc/tmp
+*logout*
+
+on next login (in theory) your homedir should be mounted ;)
