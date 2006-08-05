@@ -1,17 +1,20 @@
-pam_encfs by Anders Aagaard <aagaande@gmail.com>
+pam_encfs by neuron@hollowtube.mine.nu.
+
+pam_encfs uses execvp, so on some systems it will not find encfs if it's in /usr/local, if it's in /usr/bin it will be found.
+
 
 *Documentation is written quick and dirty, if something is wrong/you can't get it working, PLEASE mail me :)*
 
-Put pam_encfs.conf in /etc/security and modify your pam to load (for example):
+
+Put pam_encfs.conf in /etc and modify your pam to load (for example):
 auth required        pam_encfs.so
 
 and if you want to auto umount on logout:
 session        required        pam_encfs.so
-(note that setting "encfs_default --idle=1", means it'll auto umount after 1 minute idletime, so you can ignore this if you want to)
 
 
 If you want gdm working you'll have to do this: (to allow use of --public / allow_root / allow_other)
-#echo "user_allow_other" >> /etc/fuse.conf
+#echo "user_allow_other" > /etc/fuse.conf
 
 #adduser testuser (put him in the fuse group if you have one)
 #mkdir -p /mnt/storage/enc/testuser 
@@ -28,71 +31,17 @@ when you login, the directory should be mounted.
 
 example to enable encryption for existing user:
 *logout of any important things, turn off your apps, preferably do this in terminal login/as root*
-sudo mkdir -p /mnt/storage/enc/anders /mnt/storage/enc/tmp
+sudo mkdir -p /mnt/storage/enc/neuron /mnt/storage/enc/tmp
 *use your main password on next part*
-encfs /mnt/storage/enc/anders /mnt/storage/enc/tmp -- -o allow_root
-cd /home/anders
+encfs /mnt/storage/enc/neuron /mnt/storage/enc/tmp -- -o allow_root
+cd /home/neuron
 find . -print -xdev | cpio -pamd /mnt/storage/enc/tmp
 fusermount -u /mnt/storage/enc/tmp
 cd /
-sudo mv /home/anders /home/anders.BAK
-sudo mkdir /home/anders
-sudo chown anders:anders /home/anders
+sudo mv /home/neuron /home/neuron.BAK
+sudo mkdir /home/neuron
+sudo chown neuron:neuron /home/neuron
 sudo rmdir /mnt/storage/enc/tmp
 *logout*
 
 on next login (in theory) your homedir should be mounted ;)
-
-FAQ : 
-Q: What command will pam_encfs run to mount a directory?
-A: It depends on your options, but something like:
-   encfs -S --idle=1 -v /mnt/storage/enc/test /home/test -- -o allow_other,allow_root,nonempty
-   
-Q: Can I mount multiple under one login directories with pam_encfs?
-A: No, there is however an unofficial patch here : http://bugs.gentoo.org/show_bug.cgi?id=102112 ( https://joshua.haninge.kth.se/~sachankara/pam_encfs-0.1.3-multiple-mount-points.patch ).
-   This has not been applied to the main tree, as it segfaults when I test it with a very basic encfs configuration file (but might work with more advanced ones).
-
-Q: pam_encfs does not find my encfs executable
-A: pam_encfs uses execvp, that means that in some systems it wont find it if it's in /usr/local, make a symlink to /usr/bin.
-
-Q: It works on normal login, but not in gdm.
-A: Problem1, /etc/pam.d/gdm has a different system than /etc/pam.d/login, fix it ;).
-A: Problem2, You dont have the fuse option user_allow_root(or other) set, 
-   Make sure /etc/fuse.conf has user_allow_other (or user_allow_root).
-   Make sure /etc/pam_encfs.conf has fuse_default allow_root, or the fuse option allow_root set.
-   
-Q: It asks me for my password twice.
-A: Try adding use_first_pass after pam_unix (or any other module that supports it).
-
-Q: I've tried to use pam_encfs as my main authentication scheme, it doesn't work!
-A: I return PAM_IGNORE on errors, this can't work reliably as a main system, 
-   because of for example logging in twice (in which case the directory would already be mounted, 
-   and we therefor can't check password ok).
-   
-Q: I can't login to X because the filesystem doesn't support locks.
-A: This could be a problem if your not using drop_permission, use it.  And if you REALLY want to mount as root, put:
-    export XAUTHORITY=/tmp/.Xauthority-$USER
-    export ICEAUTHORITY=/tmp/.ICEauthority-$USER
-   in your ~/.bashrc
-
-
-My system-auth file on gentoo:
-auth       required     pam_env.so
-auth       sufficient   /lib/security/pam_encfs.so
-auth       sufficient   /lib/security/pam_sha512.so pwdfile /etc/security/pam.sha
-auth       sufficient   pam_unix.so likeauth nullok
-auth       required     pam_deny.so
-
-account    required     pam_unix.so
-
-password   required     pam_cracklib.so retry=3
-password   sufficient   pam_unix.so nullok md5 shadow use_authtok
-password   required     pam_deny.so
-
-session    required     pam_limits.so
-session    required     pam_unix.so
-
-
-Here it'll ask for the password twice, my modules (pam_encfs/pam_sha512) will try to use any previous password if it finds one.
-So if you move pam_unix.so in auth to under pam_env.so, it'll ask for the password once.  
-Note that if pam_unix gets a password it finds ok, pam_encfs/pam_sha512 wont be used at all.
