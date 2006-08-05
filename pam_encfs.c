@@ -544,8 +544,6 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh,
             dup2(inpipe[WRITE_END], fileno(stdout));
             close(inpipe[WRITE_END]);
 
-            // For some reason the current directory has to be set to targetpath (or path?) before exec'ing encfs through gdm
-            chdir(targetpath);
             execvp("encfs", arg);
             char errstr[128];
 
