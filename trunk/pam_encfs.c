@@ -582,7 +582,7 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh,
     int exitstatus = WEXITSTATUS(status);
     char buff[512];
 
-    len = read(inpipe[READ_END], &buff, 512);
+    len = read(inpipe[READ_END], &buff, 511);
     close(inpipe[READ_END]);
     buff[len] = 0;
     if (!checkmnt(targetpath) && (len > 0 || exitstatus > 0))
@@ -656,6 +656,9 @@ PAM_EXTERN int pam_sm_close_session(pam_handle_t * pamh,
             _pam_log(LOG_ERR, "Exec failed - %s", errstr);
             exit(127);
     }
+
+    if (waitpid(pid, NULL, 0) == -1)
+      _pam_log(LOG_ERR, "Waitpid failed - %s", strerror(errno));
 
     /*We'll get this error every single time we have more than one session active, todo fix this with some better checks + support fuser -km if no more session connected.  
        if (checkmnt(targetpath)) {
