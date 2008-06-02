@@ -44,16 +44,25 @@ sudo rmdir /mnt/storage/enc/tmp
 on next login (in theory) your homedir should be mounted ;)
 
 FAQ : 
+Q: Is there an example configuration file?
+A: Yes, both in svn (link at http://hollowtube.mine.nu/wiki/index.php?n=Projects.PamEncfs ), and in the downloaded archive from my release.
+   Some distributions have chosen an extreamly simple example configuration file, mine is a bit more explained.
+
 Q: What command will pam_encfs run to mount a directory?
 A: It depends on your options, but something like:
    encfs -S --idle=1 -v /mnt/storage/enc/test /home/test -- -o allow_other,allow_root,nonempty
+   
+Q : My KDE doesn't work.
+A : Login through KDE sometimes fails because KDE tries to store files to the home directory before mounting, and expect them to be there afterwards.
+     To work around this you'll need to set 3 things in /etc/kde3/kdm/kdmrc, "DmrcDir=/tmp" (in the general section).  And "UserAuthDir,ClientLogFile", both can be set to /tmp, these are in the [X-*-Core] section.
+     There might be security related issues with this solution, I haven't looked into that.  If your paranoid about it you could make a temp directory /tmp/user that only you have access to.
    
 Q: Can I mount multiple under one login directories with pam_encfs?
 A: No, there is however an unofficial patch here : http://bugs.gentoo.org/show_bug.cgi?id=102112 ( https://joshua.haninge.kth.se/~sachankara/pam_encfs-0.1.3-multiple-mount-points.patch ).
    This has not been applied to the main tree, as it segfaults when I test it with a very basic encfs configuration file (but might work with more advanced ones).
 
 Q: pam_encfs does not find my encfs executable
-A: pam_encfs uses execvp, that means that in some systems it wont find it if it's in /usr/local, make a symlink to /usr/bin.
+A: pam_encfs uses execvp, that means that in some systems it wont find it if it's in /usr/local/bin, make a symlink to /usr/bin.
 
 Q: It works on normal login, but not in gdm.
 A: Problem1, /etc/pam.d/gdm has a different system than /etc/pam.d/login, fix it ;).

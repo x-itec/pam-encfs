@@ -3,7 +3,7 @@ CC = gcc
 LD = ld
 INSTALL = /usr/bin/install
 CFLAGS = -fPIC -O2 -c -g -Wall -Wformat-security -fno-strict-aliasing
-LDFLAGS = -x --shared 
+LDFLAGS = --shared 
 PAMLIB = -lpam
 CPPFLAGS =
 
