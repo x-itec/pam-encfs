@@ -45,7 +45,7 @@ on next login (in theory) your homedir should be mounted ;)
 
 FAQ : 
 Q: Is there an example configuration file?
-A: Yes, both in svn (link at http://hollowtube.mine.nu/wiki/index.php?n=Projects.PamEncfs ), and in the downloaded archive from my release.
+A: Yes, both in svn (link at http://pam-encfs.googlecode.com/svn/trunk/pam_encfs.conf ), and in the downloaded archive from my release.
    Some distributions have chosen an extreamly simple example configuration file, mine is a bit more explained.
 
 Q: What command will pam_encfs run to mount a directory?
@@ -65,8 +65,9 @@ Q: pam_encfs does not find my encfs executable
 A: pam_encfs uses execvp, that means that in some systems it wont find it if it's in /usr/local/bin, make a symlink to /usr/bin.
 
 Q: It works on normal login, but not in gdm.
-A: Problem1, /etc/pam.d/gdm has a different system than /etc/pam.d/login, fix it ;).
-A: Problem2, You dont have the fuse option user_allow_root(or other) set, 
+A: Problem1, you have your encfs settings too paranoid, gdm requires some things (hard links?) that the paranoid encfs settings do not support.
+A: Problem2, /etc/pam.d/gdm has a different system than /etc/pam.d/login, fix it ;).
+A: Problem3, You dont have the fuse option user_allow_root(or other) set, 
    Make sure /etc/fuse.conf has user_allow_other (or user_allow_root).
    Make sure /etc/pam_encfs.conf has fuse_default allow_root, or the fuse option allow_root set.
    
