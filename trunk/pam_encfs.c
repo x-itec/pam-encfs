@@ -237,6 +237,24 @@ int buildCmd(char *arg[], int pos, char *line)
     return pos - orig_pos;
 }
 
+
+const char *getHome(struct passwd *pwd, pam_handle_t * pamh)
+{
+    const char *tmp = NULL;
+
+    tmp = pam_getenv(pamh, "HOME");
+    
+    if (!tmp || *tmp == '\0')
+    {
+        if (pwd->pw_dir && pwd->pw_dir != '\0')
+            return pwd->pw_dir;
+        else
+            return NULL;
+    }
+    else
+        return tmp;
+}
+
 int readconfig(struct passwd *pwd, pam_handle_t * pamh, const char *user,
                char *path, char *targetpath, char *encfs_options,
                char *fuse_options)
@@ -245,7 +263,7 @@ int readconfig(struct passwd *pwd, pam_handle_t * pamh, const char *user,
     char line[BUFSIZE];
     char username[USERNAME_MAX];
     int parsed;
-    char *tmp;
+    const char *tmp;
 
     // Return 1 = error, 2 = silent error (ie already mounted)
 
@@ -294,7 +312,8 @@ int readconfig(struct passwd *pwd, pam_handle_t * pamh, const char *user,
             searchAndReplace(encfs_options);
             
             // Check if this is the right user / default user.
-            if ((strcmp("-",username) != 0) && (strcmp(user,username) != 0))
+            if ((strcmp("-",username) != 0) && (strcmp(user,username) != 0)
+                && (strcmp("*",username) !=0))
             	continue;
             
             
@@ -304,20 +323,37 @@ int readconfig(struct passwd *pwd, pam_handle_t * pamh, const char *user,
                 // Todo check if dir exists and give better error msg.
             }
             
+            // If username is '*', paths are relative to $HOME
+            if (strcmp("*", username) == 0
+                && strcmp("-", targetpath) != 0)
+            {
+                if ((tmp = getHome(pwd, pamh)))
+                {
+                        char home[PATH_MAX];
+
+                        strcpy(home, tmp);
+                        strcat(home, "/");
+                        strcat(home, path);
+                        strcpy(path, home);
+
+                        strcpy(home, tmp);
+                        strcat(home, "/");
+                        strcat(home, targetpath);
+                        strcpy(targetpath, home);
+                }
+            }
+            
             if (strcmp("-", targetpath) == 0)
             {
                 // We do not have targetpath, construct one.
                 strcpy(targetpath, "");
-                tmp = pam_getenv(pamh, "HOME");
-                if (tmp && *tmp != '\0')
+
+                if ((tmp = getHome(pwd, pamh)))
                 {
                     strcpy(targetpath, tmp);
                 }
-                else if (pwd->pw_dir && pwd->pw_dir != '\0')
-                {
-                    strcpy(targetpath, pwd->pw_dir);
-                }
             }
+
 
 
             // Done, check targetpath and return.
@@ -353,7 +389,8 @@ int readconfig(struct passwd *pwd, pam_handle_t * pamh, const char *user,
 
             // Path does not exist, if we're a specified user give error, if not keep looking.
 
-            if (strcmp("-", username) != 0)
+            if ((strcmp("-", username) != 0)
+              && (strcmp("*", username) != 0))
             {
                 _pam_log(LOG_ERR, "Path for %s does not exist (%s)", user,
                          path);
