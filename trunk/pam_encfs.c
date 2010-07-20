@@ -80,8 +80,8 @@
 
 #define READ_END 0
 #define WRITE_END 1
-#define USERNAME_MAX		127
-#define PATH_MAX		256
+#define USERNAME_MAX    127
+#define PATH_MAX    256
 #define BUFSIZE ((USERNAME_MAX +1) + ((PATH_MAX+1) * 2))
 #define CONFIGFILE     "/etc/security/pam_encfs.conf"
 
@@ -314,11 +314,11 @@ int readconfig(struct passwd *pwd, pam_handle_t * pamh, const char *user,
             // Check if this is the right user / default user.
             if ((strcmp("-",username) != 0) && (strcmp(user,username) != 0)
                 && (strcmp("*",username) !=0))
-            	continue;
+              continue;
             
             
             if (strcmp("-",username) == 0) {
-            	strcat(path, "/");
+              strcat(path, "/");
                 strcat(path, user);
                 // Todo check if dir exists and give better error msg.
             }
@@ -676,7 +676,7 @@ PAM_EXTERN int pam_sm_close_session(pam_handle_t * pamh,
     }
 
     args[0] = "fusermount";
-    args[1] = "-u";
+    args[1] = "-uz";
     args[2] = targetpath;
     args[3] = NULL;
 
